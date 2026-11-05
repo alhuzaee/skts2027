@@ -1,0 +1,6 @@
+{
+  "name": "e-PENGURUSAN SKTS 2027",
+  "description": "Sistem Pengurusan Tugasan Guru Berasaskan Google Sheets SK Taman Seroja 2027",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
