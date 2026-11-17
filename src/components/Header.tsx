@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Shield, Database, Sun, Moon } from 'lucide-react';
+import { RefreshCw, Shield, Database, Sun, Moon, LogOut } from 'lucide-react';
 import { AppUser, SystemStatusInfo } from '../types.ts';
 
 interface HeaderProps {
@@ -15,6 +15,7 @@ interface HeaderProps {
   onOpenMobileMenu: () => void;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
+  onLogout: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -29,7 +30,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenStatusModal,
   onOpenMobileMenu,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  onLogout
 }) => {
   const isLight = theme === 'light';
 
@@ -216,6 +218,17 @@ export const Header: React.FC<HeaderProps> = ({
                     <span>Uji Akaun Tanpa Kebenaran</span>
                     <span className="text-amber-500 font-bold">403</span>
                   </button>
+                  <div className={`pt-1 mt-1 border-t ${isLight ? 'border-slate-100' : 'border-slate-700'}`}>
+                    <button
+                      onClick={onLogout}
+                      className={`w-full text-left px-2.5 py-2 rounded-xl flex items-center justify-between text-xs font-bold ${
+                        isLight ? 'text-rose-700 hover:bg-rose-50' : 'text-rose-300 hover:bg-slate-700'
+                      }`}
+                    >
+                      <span>Log Keluar</span>
+                      <LogOut className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>

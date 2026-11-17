@@ -26,6 +26,7 @@ import { AuditLogView } from './components/AuditLogView.tsx';
 import { UsersManagementView } from './components/UsersManagementView.tsx';
 import { ConfigManagementView } from './components/ConfigManagementView.tsx';
 import { StatusSistemModal } from './components/StatusSistemModal.tsx';
+import { LoginPage } from './components/LoginPage.tsx';
 import { GuruProfileModal } from './components/GuruProfileModal.tsx';
 import { TambahEditGuruModal } from './components/Modals/TambahEditGuruModal.tsx';
 import { TambahEditTugasanModal } from './components/Modals/TambahEditTugasanModal.tsx';
@@ -34,16 +35,21 @@ import { VersionConflictModal } from './components/Modals/VersionConflictModal.t
 import { AlertTriangle, ShieldAlert, Loader2 } from 'lucide-react';
 
 export default function App() {
-  // Auth state
+  // Auth state: user starts logged out and must sign in via the login page
   const [currentUserEmail, setCurrentUserEmail] = useState<string>(() => {
-    return (typeof window !== 'undefined' && localStorage.getItem('skts_user_email')) || 'iab-1235@moe-dl.edu.my';
+    return (typeof window !== 'undefined' && localStorage.getItem('skts_user_email')) || '';
   });
   const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isCheckingLogin, setIsCheckingLogin] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && currentUserEmail) {
-      localStorage.setItem('skts_user_email', currentUserEmail);
+    if (typeof window !== 'undefined') {
+      if (currentUserEmail) {
+        localStorage.setItem('skts_user_email', currentUserEmail);
+      } else {
+        localStorage.removeItem('skts_user_email');
+      }
     }
   }, [currentUserEmail]);
 
@@ -117,8 +123,10 @@ export default function App() {
 
     try {
       // 1. Verify User
+      setIsCheckingLogin(true);
       const user = await api.getCurrentUser();
       setCurrentUser(user);
+      setIsCheckingLogin(false);
 
       // 2. Load Core Data in Parallel
       const [tList, tkList, cfg, uList, st] = await Promise.all([
@@ -144,22 +152,26 @@ export default function App() {
       console.error('Data load error:', err);
       if (err.message && err.message.includes('Anda tidak mempunyai kebenaran')) {
         setAuthError(err.message);
+      } else if (!currentUserEmail) {
+        // Login attempt failed for another reason; surface it on the login page
+        setAuthError(err.message || 'Log masuk gagal. Sila cuba lagi.');
       }
     } finally {
+      setIsCheckingLogin(false);
       setIsLoading(false);
       setIsRefreshing(false);
       setSecondsUntilRefresh(15);
     }
   }, [currentUserEmail]);
 
-  // Initial load and user change
+  // Data loading only begins once the user has signed in
   useEffect(() => {
-    loadData(true);
+    if (currentUserEmail) loadData(true);
   }, [loadData]);
 
   // 15-second Auto Refresh Timer (Section 28 & 42: pauses during active editing)
   useEffect(() => {
-    if (isEditing || authError) return;
+    if (isEditing || authError || !currentUserEmail) return;
 
     const timer = setInterval(() => {
       setSecondsUntilRefresh((prev) => {
@@ -338,6 +350,21 @@ export default function App() {
     await loadData(false);
   };
 
+  // Login Screen: shown when no user has signed in yet
+  if (!currentUserEmail) {
+    return (
+      <LoginPage
+        onLogin={(email) => {
+          setAuthError(null);
+          setCurrentUserEmail(email);
+        }}
+        isChecking={isCheckingLogin}
+        error={authError}
+        theme={theme}
+      />
+    );
+  }
+
   // Unauthorized Forbidden Screen (Section 7)
   if (authError) {
     return (
@@ -354,7 +381,7 @@ export default function App() {
             Alamat e-mel <code className="text-amber-300 font-mono">{currentUserEmail}</code> tidak berdaftar atau
             berstatus <strong>Tidak Aktif</strong> di dalam helaian USERS e-PENGURUSAN SKTS 2027.
           </p>
-          <div className="pt-4">
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-2">
             <button
               onClick={() => {
                 setCurrentUserEmail('iab-1235@moe-dl.edu.my');
@@ -362,6 +389,16 @@ export default function App() {
               className="px-6 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-lg shadow-blue-600/30"
             >
               Log Masuk Semula Sebagai Pentadbir (iab-1235@moe-dl.edu.my)
+            </button>
+            <button
+              onClick={() => {
+                setAuthError(null);
+                setCurrentUser(null);
+                setCurrentUserEmail('');
+              }}
+              className="px-6 py-2.5 rounded-xl text-xs font-bold border border-slate-700 text-slate-300 hover:bg-slate-800 transition-all"
+            >
+              Log Keluar
             </button>
           </div>
         </div>
@@ -387,6 +424,11 @@ export default function App() {
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))}
+        onLogout={() => {
+          setAuthError(null);
+          setCurrentUser(null);
+          setCurrentUserEmail('');
+        }}
       />
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto">
